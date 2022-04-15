@@ -1,0 +1,210 @@
+<html>
+<head>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+    }
+    html,
+    body,
+    .content {
+      height: 100%;
+      width: 100%;
+    }
+    .content {
+      display: flex;
+      flex-direction: column;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      height: 200px
+    }
+    .header button {
+      margin: 5px 10px;
+    }
+    .main {
+      flex: 1;
+      background-color: #999;
+      position: relative;
+      overflow: hidden;
+    }
+    #svgActiveOperationOuter {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      overflow: hidden;
+      visibility: visible;
+      pointer-events: none;
+    }
+    #svgActiveOperation {
+      position: absolute;
+      cursor: move;
+      border: 1px solid rgba(240, 248, 255, 0.3);
+      pointer-events: auto;
+    }
+    .svgActiveOperationDot {
+      position: absolute;
+      height: 10px;
+      width: 10px;
+      background: rgba(239, 222, 205, 0.6);
+      border-color: rgba(240, 248, 255, 0.3);
+      border-width: 1px;
+      border-style: solid;
+      margin: 0;
+      display: none;
+    }
+    .svgActiveOperationRotate {
+      position: absolute;
+      background: rgba(239, 222, 205, 0.6);
+      border: 1px solid rgba(30, 30, 255, 0.25);
+      height: 12px;
+      width: 12px;
+      border-radius: 7px;
+      box-sizing: border-box;
+      display: none;
+    }
+    #svgActiveOperation_1 {
+      cursor: ns-resize;
+      top: -12px;
+      left: calc(50% - 6px);
+    }
+    #svgActiveOperation_2 {
+      cursor: ns-resize;
+      bottom: -12px;
+       left: calc(50% - 6px);
+     }
+    #svgActiveOperation_3 {
+      left: -12px;
+      top: calc(50% - 6px);
+      cursor: ew-resize;
+    }
+    #svgActiveOperation_4 {
+      right: -12px;
+      top: calc(50% - 6px);
+      cursor: ew-resize;
+    }
+    #svgActiveOperation_5 {
+      cursor: nwse-resize;
+      top: -12px;
+      left: -12px;
+    }
+    #svgActiveOperation_6 {
+      cursor: nesw-resize;
+      top: -12px;
+      right: -12px;
+    }
+    #svgActiveOperation_7 {
+      cursor: nesw-resize;
+      bottom: -12px;
+      left: -12px;
+    }
+    #svgActiveOperation_8 {
+      cursor: nwse-resize;
+      bottom: -12px;
+      right: -12px;
+    }
+    #svgActiveOperation_9 {
+      left: 50%;
+      transform: translate3d(-50%, 0px, 0px);
+      top: -70px;
+    }
+  </style>
+  <script src="drawer.js"></script>
+</head>
+<body>
+<div class="content">
+  <div class="header">
+    <button onclick="goToEditMode()">进入编辑模式</button>
+    <button onclick="exitEditMode()">退出编辑模式</button>
+    <button onclick="goToAddArrowMode()">添加箭头</button>
+    <button onclick="goToAddRectMode()">添加矩形</button>
+    <button onclick="goToAddCircleMode()">添加圆形</button>
+  </div>
+  <div class="main" id="main">
+    <div id="svgActiveOperationOuter">
+      <div id="svgActiveOperation">
+        <div class="svgActiveOperationDot" id="svgActiveOperation_1">&nbsp;</div>
+        <div class="svgActiveOperationDot" id="svgActiveOperation_2">&nbsp;</div>
+        <div class="svgActiveOperationDot" id="svgActiveOperation_3">&nbsp;</div>
+        <div class="svgActiveOperationDot" id="svgActiveOperation_4">&nbsp;</div>
+        <div class="svgActiveOperationDot" id="svgActiveOperation_5">&nbsp;</div>
+        <div class="svgActiveOperationDot" id="svgActiveOperation_6">&nbsp;</div>
+        <div class="svgActiveOperationDot" id="svgActiveOperation_7">&nbsp;</div>
+        <div class="svgActiveOperationDot" id="svgActiveOperation_8">&nbsp;</div>
+        <div class="svgActiveOperationRotate" id="svgActiveOperation_9">&nbsp;</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="svg-edit-controller.js"></script>
+<script src="math.js"></script>
+<script src="marker-common.js"></script>
+</body>
+<script>
+  const main = document.getElementById('main');
+  const svgDom = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  const basicNumber = 500;
+  svgDom.setAttributeNS('', 'id', 'tmds_svg');
+  svgDom.setAttributeNS('', 'version', '1.1');
+  resizeViewBox();
+  main.appendChild(svgDom);
+  let mode = "arrow";
+  let isEditMode = false;
+
+  function goToEditMode() {
+    drawer.bindEvent();
+    this.isEditMode = true;
+  }
+
+  function exitEditMode() {
+    drawer.removeEvent();
+    this.isEditMode = false;
+  }
+
+  function goToAddArrowMode() {
+    drawer.setMode('arrow')
+  }
+
+  function goToAddRectMode() {
+    drawer.setMode('rect')
+  }
+
+  function goToAddCircleMode() {
+    drawer.setMode('circle')
+  }
+
+  function getRelativePoint(a, b, angle) {
+    if (angle === 90) {
+      return [b[0], a[1]];
+    } else {
+      const radian = (angle * Math.PI) / 180;
+      let slop = Math.tan(radian);
+      const a1 = a[1] - a[0] * slop;
+      const a2 = b[1] + b[0] / slop;
+      const x = (a2 - a1) / (slop + 1 / slop);
+      const y = x * slop + a1;
+      return [x, y];
+    }
+  }
+
+  window.onresize = () => {
+    resizeViewBox();
+    if (editDom.style.display === 'block') {
+      svgEditController.refreshEditDom();
+    }
+  }
+
+  function resizeViewBox() {
+    const main = document.getElementById('main');
+    const viewBoxWidth = main.clientWidth / main.clientHeight * basicNumber * 2
+    svgDom.setAttributeNS('', 'width', main.clientWidth);
+    svgDom.setAttributeNS('', 'height', main.clientHeight);
+    svgDom.setAttributeNS('', 'viewBox', `${-viewBoxWidth / 2} ${-basicNumber} ${viewBoxWidth} ${basicNumber * 2}`);
+  }
+
+  console.log(getRelativePoint([0, 0], [0, -1], 45))
+</script>
+</html>
